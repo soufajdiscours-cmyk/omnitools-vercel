@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Copywriter - Generate Product Descriptions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #000; --panel: #111; --border: #333; --text: #ededed; --muted: #888; --accent: #fff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        
+        .container { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 12px; width: 100%; max-width: 600px; text-align: center; }
+        h1 { font-size: 28px; margin-bottom: 10px; }
+        p.sub { color: var(--muted); font-size: 14px; margin-bottom: 30px; }
+        
+        textarea { width: 100%; padding: 15px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; font-family: 'Inter'; font-size: 14px; min-height: 100px; margin-bottom: 15px; outline: none; resize: vertical;}
+        textarea:focus { border-color: #555; }
+        
+        .btn { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: #ccc; }
+        
+        #output-box { margin-top: 20px; padding: 20px; background: #000; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; line-height: 1.6; text-align: left; display: none; white-space: pre-wrap;}
+        
+        .free-badge { display: inline-block; background: #1a1a1a; color: #10b981; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 20px; border: 1px solid #10b981;}
+        
+        .paywall { display: none; margin-top: 20px; padding: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid #ff4444; border-radius: 8px; color: #ff4444; text-align: center; }
+        .paywall button { background: #ff4444; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="free-badge">3 Free Generations Left</div>
+        <h1>AI Product Copywriter</h1>
+        <p class="sub">Turn a simple product name into a high-converting sales description.</p>
+        
+        <textarea id="product-name" placeholder="Enter product name (e.g., 'Wireless Noise-Canceling Headphones')..."></textarea>
+        <button class="btn" onclick="generateText()" id="gen-btn">Generate Description</button>
+        
+        <div id="output-box"></div>
+        
+        <div class="paywall" id="paywall">
+            <h3>You've reached your free limit!</h3>
+            <p>Upgrade to Pro to get unlimited generations and higher quality results.</p>
+            <button onclick="alert('Stripe Integration will go here!')">Subscribe for $5/month</button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ ضع المفتاح الخاص بك هنا بدلاً من YOUR_API_KEY_HERE
+        const GEMINI_API_KEY = ""; 
+        
+        let generationCount = 0;
+
+        async function generateText() {
+            const input = document.getElementById('product-name').value;
+            const outBox = document.getElementById('output-box');
+            const btn = document.getElementById('gen-btn');
+            const paywall = document.getElementById('paywall');
+            const badge = document.querySelector('.free-badge');
+
+            if(!input) return alert("Please enter a product name.");
+            if(generationCount >= 3) {
+                outBox.style.display = 'none';
+                paywall.style.display = 'block';
+                return;
+            }
+
+            btn.innerText = "Generating... Please wait.";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: "Write a highly persuasive, 3-paragraph e-commerce product description for: " + input + ". Include emojis and a call to action." }] }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if(data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                const result = data.candidates[0].content.parts[0].text;
+
+                outBox.style.display = 'block';
+                outBox.innerText = result;
+                
+                generationCount++;
+                badge.innerText = (3 - generationCount) + " Free Generations Left";
+                
+                if(generationCount >= 3) {
+                    outBox.style.display = 'none';
+                    paywall.style.display = 'block';
+                }
+
+            } catch (error) {
+                outBox.style.display = 'block';
+                outBox.innerText = "Error: " + error.message;
+            }
+
+            btn.innerText = "Generate Description";
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
